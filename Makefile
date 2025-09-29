@@ -124,3 +124,11 @@ appstore: dev-setup build-js-production
 		openssl dgst -sha512 -sign $(cert_dir)/$(app_name).key $(build_dir)/$(app_name).tar.gz | openssl base64; \
 	fi
 
+migrations-create:
+	@echo "Введите номер версии (например: 22 для версии 0022):"
+	@read version; \
+	version_padded=$$(printf "%04d" $$version); \
+	echo "y" | docker compose exec -T app php ./occ migrations:generate announcementcenter $$version_padded
+
+migrations-execute:
+	docker compose exec -T app php ./occ migrations:execute announcementcenter $(VERSION)

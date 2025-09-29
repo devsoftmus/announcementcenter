@@ -47,20 +47,36 @@ const searchGroups = async function(search) {
  * @param {boolean} comments Are comments allowed
  * @param {number} scheduleTime Time, when the announcement is scheduled
  * @param {number} deleteTime Time, when the announcement should be deleted
+ * @param {File} coverFile Cover image file
  * @return {object} The axios response
  */
-const postAnnouncement = async function(subject, message, plainMessage, groups, activities, notifications, emails, comments, scheduleTime = null, deleteTime = null) {
-	return axios.post(generateOcsUrl('apps/announcementcenter/api/v1/announcements'), {
-		subject,
-		message,
-		plainMessage,
-		groups,
-		activities,
-		notifications,
-		emails,
-		comments,
-		scheduleTime,
-		deleteTime,
+const postAnnouncement = async function(subject, message, plainMessage, groups, activities, notifications, emails, comments, scheduleTime = null, deleteTime = null, coverFile = null) {
+	const formData = new FormData()
+
+	// Добавляем все данные в FormData
+	formData.append('subject', subject)
+	formData.append('message', message)
+	formData.append('plainMessage', plainMessage)
+	formData.append('groups', groups)
+	formData.append('activities', activities)
+	formData.append('notifications', notifications)
+	formData.append('emails', emails)
+	formData.append('comments', comments)
+
+	if (scheduleTime) {
+		formData.append('scheduleTime', scheduleTime)
+	}
+	if (deleteTime) {
+		formData.append('deleteTime', deleteTime)
+	}
+	if (coverFile) {
+		formData.append('coverFile', coverFile)
+	}
+
+	return axios.post(generateOcsUrl('apps/announcementcenter/api/v1/announcements'), formData, {
+		headers: {
+			'Content-Type': 'multipart/form-data'
+		}
 	})
 }
 
@@ -83,6 +99,7 @@ const deleteAnnouncement = async function(id) {
 const removeNotifications = async function(id) {
 	return axios.delete(generateOcsUrl('apps/announcementcenter/api/v1/announcements/{id}/notifications', { id }))
 }
+
 
 export {
 	getAnnouncements,

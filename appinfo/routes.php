@@ -8,6 +8,11 @@
 return [
 	'routes' => [
 		['name' => 'page#index', 'url' => '/', 'verb' => 'GET'],
+        [
+            'name' => 'file#getEntityFile',
+            'url'  => '/file/{entityId}/{fileName}',
+            'verb' => 'GET',
+        ],
 	],
 	'ocs' => [
 		['name' => 'API#get', 'url' => '/api/v1/announcements', 'verb' => 'GET'],

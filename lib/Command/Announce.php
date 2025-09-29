@@ -51,6 +51,11 @@ class Announce extends Command {
 				InputArgument::REQUIRED,
 				'Message of the announcement (supports markdown)',
 			)
+            ->addArgument(
+				'coverPath',
+				InputArgument::REQUIRED,
+				'Path to cover of the announcement',
+			)
 			->addOption(
 				'activities',
 				null,
@@ -112,6 +117,7 @@ class Announce extends Command {
 		}
 		$subject = $input->getArgument('subject');
 		$message = $input->getArgument('message');
+        $coverPath = $input->getArgument('coverPath');
 
 		// options
 		$groups = $input->getOption('group');
@@ -140,7 +146,7 @@ class Announce extends Command {
 		$plainMessage = $this->plainifyMessage($message);
 		$notificationOptions = $this->notificationType->setNotificationTypes($activities, $notifications, $emails);
 
-		$result = $this->manager->announce($subject, $message, $plainMessage, $user, $this->time->getTime(), $groups, $comments, $notificationOptions, $scheduleTime, $deleteTime);
+		$result = $this->manager->announce($subject, $message, $coverPath, $plainMessage, $user, $this->time->getTime(), $groups, $comments, $notificationOptions, $scheduleTime, $deleteTime);
 		$output->writeln('Created announcement #' . $result->getId() . ': ' . $result->getSubject());
 
 		if ($scheduleTime) {

@@ -15,6 +15,7 @@ use OCA\AnnouncementCenter\Model\AnnouncementMapper;
 use OCA\AnnouncementCenter\Model\Group;
 use OCA\AnnouncementCenter\Model\GroupMapper;
 use OCA\AnnouncementCenter\Model\NotificationType;
+use OCA\AnnouncementCenter\Service\FileService;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\BackgroundJob\IJobList;
 use OCP\Comments\ICommentsManager;
@@ -54,6 +55,9 @@ class Manager {
 	/** @var NotificationType */
 	protected $notificationType;
 
+    /** @var FileService */
+    private FileService $fileService;
+
 	public function __construct(IConfig $config,
 		AnnouncementMapper $announcementMapper,
 		GroupMapper $groupMapper,
@@ -62,7 +66,8 @@ class Manager {
 		ICommentsManager $commentsManager,
 		IJobList $jobList,
 		IUserSession $userSession,
-		NotificationType $notificationType) {
+		NotificationType $notificationType,
+        FileService $fileService) {
 		$this->config = $config;
 		$this->announcementMapper = $announcementMapper;
 		$this->groupMapper = $groupMapper;
@@ -72,6 +77,7 @@ class Manager {
 		$this->jobList = $jobList;
 		$this->userSession = $userSession;
 		$this->notificationType = $notificationType;
+        $this->fileService      = $fileService;
 	}
 
 	/**
@@ -85,7 +91,7 @@ class Manager {
 	 * @return Announcement
 	 * @throws \InvalidArgumentException when the subject is empty or invalid
 	 */
-	public function announce(string $subject, string $message, string $plainMessage, string $user, int $time, array $groups, bool $comments, int $notificationOptions, ?int $scheduledTime = null, ?int $deleteTime = null): Announcement {
+	public function announce(string $subject, string $message, string $plainMessage, string $user, int $time, string $groups, bool $comments, int $notificationOptions, ?int $scheduledTime = null, ?int $deleteTime = null, ?array $coverFile = null): Announcement {
 		$subject = trim($subject);
 		$message = trim($message);
 		$plainMessage = trim($plainMessage);
@@ -96,6 +102,14 @@ class Manager {
 		if ($subject === '') {
 			throw new \InvalidArgumentException('Invalid subject', 2);
 		}
+
+        if (!empty($coverFile) && !$this->fileService->validateFile($coverFile)) {
+            throw new \InvalidArgumentException('Invalid file type or file too large', 3);
+        }
+
+        if (!empty($groups)) {
+            $groups = explode(',', $groups);
+        }
 
 		$announcement = new Announcement();
 		$announcement->setSubject($subject);
@@ -108,7 +122,16 @@ class Manager {
 		$announcement->setScheduleTime($scheduledTime);
 		$announcement->setDeleteTime($deleteTime);
 		$announcement->setNotTypes($notificationOptions);
-		$this->announcementMapper->insert($announcement);
+		$entity = $this->announcementMapper->insert($announcement);
+        $announcementId = $entity->getId();
+
+        $coverName = $this->fileService->saveFileToAppData("announcement-{$announcementId}", $coverFile);
+
+        if (!empty($coverName)) {
+            $announcement = $this->announcementMapper->getById($announcementId);
+            $announcement->setCoverPath($coverName);
+            $this->announcementMapper->update($announcement);
+        }
 
 		if (is_null($scheduledTime) || $scheduledTime === 0) {
 			$this->publishAnnouncement($announcement);

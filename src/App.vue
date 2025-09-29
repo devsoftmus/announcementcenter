@@ -14,6 +14,7 @@
 					:is-admin="isAdmin"
 					:author-id="announcement.author_id"
 					:schedule-time="announcement.schedule_time"
+					:cover-path="announcement.cover_path"
 					v-bind="announcement"
 					@click="onClickAnnouncement" />
 			</transition-group>

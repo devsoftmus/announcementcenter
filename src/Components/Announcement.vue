@@ -59,6 +59,23 @@
 			</div>
 		</div>
 
+		<div v-if="coverPath" 
+			class="announcement__cover"
+			:style="{ backgroundImage: `url(${coverPath})` }"
+			:title="t('announcementcenter', 'Click to view full size')"
+			@click="onClickCover">
+		</div>
+
+		<!-- Pop-up для просмотра изображения -->
+		<div v-if="showImageModal" class="image-modal" @click="closeImageModal">
+			<div class="image-modal__content" @click.stop>
+				<button class="image-modal__close" @click="closeImageModal" :title="t('announcementcenter', 'Close')">
+					<IconClose :size="24" />
+				</button>
+				<img :src="coverPath" :alt="t('announcementcenter', 'Cover image')" class="image-modal__image" />
+			</div>
+		</div>
+
 		<div v-if="message"
 			class="announcement__message"
 			@click="onClickFoldedMessage">
@@ -98,12 +115,14 @@ import {
 } from '../services/announcementsService.js'
 import IconBellOffOutline from 'vue-material-design-icons/BellOffOutline.vue'
 import IconTrashCanOutline from 'vue-material-design-icons/TrashCanOutline.vue'
+import IconClose from 'vue-material-design-icons/Close.vue'
 
 export default {
 	name: 'Announcement',
 	components: {
 		IconBellOffOutline,
 		IconTrashCanOutline,
+		IconClose,
 		NcActions,
 		NcActionButton,
 		NcAvatar,
@@ -157,11 +176,17 @@ export default {
 			required: false,
 			default: null,
 		},
+		coverPath: {
+			type: String,
+			required: false,
+			default: null,
+		},
 	},
 
 	data() {
 		return {
 			isMessageFolded: true,
+			showImageModal: false,
 		}
 	},
 
@@ -231,9 +256,30 @@ export default {
 		if (this.message.length <= 200) {
 			this.isMessageFolded = false
 		}
+		
+		// Добавляем обработчик клавиши Escape
+		document.addEventListener('keydown', this.handleKeydown)
+	},
+
+	beforeDestroy() {
+		// Удаляем обработчик клавиши Escape
+		document.removeEventListener('keydown', this.handleKeydown)
 	},
 
 	methods: {
+		onClickCover() {
+			this.showImageModal = true
+		},
+
+		closeImageModal() {
+			this.showImageModal = false
+		},
+
+		handleKeydown(event) {
+			if (event.key === 'Escape' && this.showImageModal) {
+				this.closeImageModal()
+			}
+		},
 		onClickCommentCount() {
 			this.$emit('click', this.id)
 		},
@@ -304,6 +350,24 @@ export default {
 			}
 		}
 
+     &__cover {
+       margin-top: 16px;
+       border-radius: var(--border-radius-large);
+       overflow: hidden;
+       cursor: pointer;
+       transition: transform 0.2s ease;
+       width: 100%;
+       height: 250px;
+       background-size: cover;
+       background-position: center;
+       background-repeat: no-repeat;
+       display: block;
+
+       &:hover {
+         transform: scale(1.02);
+       }
+     }
+
 		&__message {
 			position: relative;
 			margin-top: 20px;
@@ -337,5 +401,58 @@ export default {
 
 	.critical > :deep(.action-button) {
 		color: var(--color-text-error);
+	}
+
+	// Стили для модального окна изображения
+	.image-modal {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.8);
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		z-index: 10000;
+		cursor: pointer;
+
+		&__content {
+			position: relative;
+			max-width: 95%;
+			max-height: 95%;
+			background: var(--color-main-background);
+			border-radius: var(--border-radius-large);
+			padding: 10px;
+			cursor: default;
+		}
+
+		&__close {
+			position: absolute;
+			top: 10px;
+			right: 10px;
+			background: var(--color-background-hover);
+			border: none;
+			border-radius: 50%;
+			width: 40px;
+			height: 40px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			cursor: pointer;
+			z-index: 10001;
+			transition: background-color 0.2s ease;
+
+			&:hover {
+				background: var(--color-background-dark);
+			}
+		}
+
+		&__image {
+			max-width: 100%;
+			max-height: 90vh;
+			object-fit: contain;
+			display: block;
+		}
 	}
 </style>

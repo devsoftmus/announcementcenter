@@ -11,6 +11,7 @@ namespace OCA\AnnouncementCenter\Model;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Db\Entity;
 use OCP\AppFramework\Db\QBMapper;
+use OCP\DB\Exception;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
 
@@ -75,6 +76,54 @@ class AnnouncementMapper extends QBMapper {
 		$qb->execute();
 		return $entity;
 	}
+
+    /**
+     * Updates an entry in the db from an entity
+     *
+     * @param Entity $entity the entity that should be created
+     * @psalm-param T $entity the entity that should be created
+     * @return Entity the saved entity with the set id
+     * @psalm-return T the saved entity with the set id
+     * @throws Exception
+     * @throws \InvalidArgumentException if entity has no id
+     * @since 14.0.0
+     */
+    public function update(Entity $entity): Entity {
+        $properties = $entity->getUpdatedFields();
+        if (\count($properties) === 0) {
+            return $entity;
+        }
+
+        $id = $entity->getId();
+        if ($id === null) {
+            throw new \InvalidArgumentException(
+                'Entity which should be updated has no id');
+        }
+
+        unset($properties['announcement_id']);
+
+        $qb = $this->db->getQueryBuilder();
+        $qb->update($this->tableName);
+
+        // build the fields
+        foreach ($properties as $property => $updated) {
+            $column = $entity->propertyToColumn($property);
+            $getter = 'get' . ucfirst($property);
+            $value = $entity->$getter();
+
+            $type = $this->getParameterTypeForProperty($entity, $property);
+            $qb->set($column, $qb->createNamedParameter($value, $type));
+        }
+
+        $idType = $this->getParameterTypeForProperty($entity, 'announcement_id');
+
+        $qb->where(
+            $qb->expr()->eq('announcement_id', $qb->createNamedParameter($id, $idType))
+        );
+        $qb->executeStatement();
+
+        return $entity;
+    }
 
 	/**
 	 * @param array $userGroups

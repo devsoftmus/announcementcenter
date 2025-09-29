@@ -13,6 +13,8 @@ use OCA\AnnouncementCenter\Dashboard\Widget;
 use OCA\AnnouncementCenter\Listener\BeforeTemplateRenderedListener;
 use OCA\AnnouncementCenter\Listener\CommentsEntityListener;
 use OCA\AnnouncementCenter\Notification\Notifier;
+use OCA\Cabinet\Manager;
+use OCA\DashboardCustom\Dashboard\CustomDataWidget;
 use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
@@ -41,5 +43,9 @@ class Application extends App implements IBootstrap {
 	}
 
 	public function boot(IBootContext $context): void {
+        $context->injectFn(function(Manager $cabinetManager) {
+            // Регистрируем наш кастомный виджет
+            $cabinetManager->lazyRegisterWidget(CustomDataWidget::class, self::APP_ID);
+        });
 	}
 }

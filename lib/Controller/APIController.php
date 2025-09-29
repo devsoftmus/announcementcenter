@@ -68,6 +68,7 @@ class APIController extends OCSController {
 	public function get(int $offset = 0): DataResponse {
 		$announcements = $this->manager->getAnnouncements($offset);
 		$data = array_map([$this, 'renderAnnouncement'], $announcements);
+
 		return new DataResponse($data);
 	}
 
@@ -76,6 +77,7 @@ class APIController extends OCSController {
 	 *
 	 * @param string $subject
 	 * @param string $message
+	 * @param string $coverPath
 	 * @param string $plainMessage
 	 * @param string[] $groups,
 	 * @param bool $activities
@@ -86,19 +88,22 @@ class APIController extends OCSController {
 	 * @param ?int $deleteTime
 	 * @return DataResponse
 	 */
-	public function add(string $subject, string $message, string $plainMessage, array $groups, bool $activities, bool $notifications, bool $emails, bool $comments, ?int $scheduleTime = null, ?int $deleteTime = null): DataResponse {
+	public function add(string $subject, string $message, string $plainMessage, string $groups, bool $activities, bool $notifications, bool $emails, bool $comments, ?int $scheduleTime = null, ?int $deleteTime = null): DataResponse {
 		if (!$this->manager->checkIsAdmin()) {
 			return new DataResponse(
 				['message' => 'Logged in user must be an admin'],
 				Http::STATUS_FORBIDDEN
 			);
 		}
+
+        $coverFile = $this->request->getUploadedFile('coverFile');
+
 		$user = $this->userSession->getUser();
 		$userId = $user instanceof IUser ? $user->getUID() : '';
 		$notificationOptions = $this->notificationType->setNotificationTypes($activities, $notifications, $emails);
 
 		try {
-			$announcement = $this->manager->announce($subject, $message, $plainMessage, $userId, $this->timeFactory->getTime(), $groups, $comments, $notificationOptions, $scheduleTime, $deleteTime);
+			$announcement = $this->manager->announce($subject, $message, $plainMessage, $userId, $this->timeFactory->getTime(), $groups, $comments, $notificationOptions, $scheduleTime, $deleteTime, $coverFile);
 		} catch (InvalidArgumentException $e) {
 			return new DataResponse(
 				['error' => $this->l->t('The subject is too long or empty')],
@@ -113,6 +118,11 @@ class APIController extends OCSController {
 
 	protected function renderAnnouncement(Announcement $announcement): array {
 		$displayName = $this->userManager->getDisplayName($announcement->getUser()) ?? $announcement->getUser();
+        $coverPath = $announcement->getCoverPath();
+
+        if (!empty($coverPath)) {
+            $coverPath = '/apps/announcementcenter/file/announcement-'.$announcement->getId().'/'.$coverPath;
+        }
 
 		$result = [
 			'id' => $announcement->getId(),
@@ -121,6 +131,7 @@ class APIController extends OCSController {
 			'time' => $announcement->getTime(),
 			'subject' => $announcement->getParsedSubject(),
 			'message' => $announcement->getMessage(),
+			'cover_path' => $coverPath ?? null,
 			'groups' => null,
 			'comments' => $announcement->getAllowComments() ? $this->manager->getNumberOfComments($announcement) : false,
 			'schedule_time' => $announcement->getScheduleTime(),

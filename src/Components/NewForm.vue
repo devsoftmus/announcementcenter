@@ -19,6 +19,28 @@
 			rows="4"
 			:placeholder="t('announcementcenter', 'Write announcement text, Markdown can be used …')" />
 
+		<div class="announcement__form__image-upload">
+			<label class="image-upload-label">
+				<input ref="imageInput"
+					type="file"
+					accept="image/*"
+					@change="onImageSelect"
+					style="display: none;">
+				<div class="image-upload-button">
+					<IconImage :size="20" />
+					<span>{{ t('announcementcenter', 'Add cover image') }}</span>
+				</div>
+			</label>
+
+
+			<div v-if="coverPreview" class="image-preview">
+				<img :src="coverPreview" :alt="t('announcementcenter', 'Cover image preview')" />
+				<button type="button" class="remove-image" @click="removeImage">
+					<IconClose :size="16" />
+				</button>
+			</div>
+		</div>
+
 		<div class="announcement__form__buttons">
 			<NcButton type="primary"
 				:disabled="!subject"
@@ -105,6 +127,8 @@ import { remark } from 'remark'
 import strip from 'strip-markdown'
 import IconClockStart from 'vue-material-design-icons/ClockStart.vue'
 import IconClockEnd from 'vue-material-design-icons/ClockEnd.vue'
+import IconImage from 'vue-material-design-icons/Image.vue'
+import IconClose from 'vue-material-design-icons/Close.vue'
 
 export default {
 	name: 'NewForm',
@@ -112,6 +136,8 @@ export default {
 	components: {
 		IconClockEnd,
 		IconClockStart,
+		IconImage,
+		IconClose,
 		NcActions,
 		NcActionCheckbox,
 		NcActionInput,
@@ -133,6 +159,10 @@ export default {
 			deleteEnabled: true,
 			scheduleTime: null,
 			deleteTime: null,
+			// Поля для изображения
+			coverPath: null,
+			coverPreview: null,
+			coverFile: null,
 		}
 	},
 
@@ -153,6 +183,10 @@ export default {
 			this.deleteEnabled = true
 			this.scheduleTime = null
 			this.deleteTime = null
+			// Сброс полей изображения
+			this.coverPath = null
+			this.coverPreview = null
+			this.coverFile = null
 		},
 
 		onSearchChanged: debounce(function(search) {
@@ -178,6 +212,43 @@ export default {
 				return this.scheduleTime
 			}
 			return new Date()
+		},
+
+		// Методы для работы с изображением
+		onImageSelect(event) {
+			const file = event.target.files[0]
+			if (!file) return
+
+			// Проверяем тип файла
+			if (!file.type.startsWith('image/')) {
+				showError(t('announcementcenter', 'Please select a valid image file'))
+				return
+			}
+
+			// Проверяем размер файла (максимум 5MB)
+			if (file.size > 5 * 1024 * 1024) {
+				showError(t('announcementcenter', 'Image file is too large. Maximum size is 5MB'))
+				return
+			}
+
+			this.coverFile = file
+
+			// Создаем предварительный просмотр
+			const reader = new FileReader()
+			reader.onload = (e) => {
+				this.coverPreview = e.target.result
+			}
+			reader.readAsDataURL(file)
+		},
+
+		removeImage() {
+			this.coverFile = null
+			this.coverPreview = null
+			this.coverPath = null
+			// Очищаем input
+			if (this.$refs.imageInput) {
+				this.$refs.imageInput.value = ''
+			}
 		},
 
 		async searchGroups(search) {
@@ -208,6 +279,7 @@ export default {
 					this.allowComments,
 					new Date(this.scheduleTime).getTime() / 1000, // time in seconds
 					new Date(this.deleteTime).getTime() / 1000,
+					this.coverFile // передаем файл напрямую
 				)
 				this.$store.dispatch('addAnnouncement', response.data.ocs.data)
 
@@ -249,6 +321,73 @@ export default {
 
 	&__timepicker {
 		width: 100%;
+	}
+
+	&__image-upload {
+		margin: 16px 0;
+		border: 2px dashed var(--color-border);
+		border-radius: var(--border-radius);
+		padding: 16px;
+		text-align: center;
+		transition: border-color 0.2s ease;
+
+		&:hover {
+			border-color: var(--color-primary);
+		}
+
+		.image-upload-label {
+			cursor: pointer;
+			display: block;
+		}
+
+		.image-upload-button {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 8px;
+			padding: 12px;
+			color: var(--color-text-maxcontrast);
+			transition: color 0.2s ease;
+
+			&:hover {
+				color: var(--color-primary);
+			}
+		}
+
+		.image-preview {
+			position: relative;
+			margin-top: 16px;
+			display: inline-block;
+
+			img {
+				max-width: 200px;
+				max-height: 150px;
+				border-radius: var(--border-radius);
+				box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+			}
+
+			.remove-image {
+				position: absolute;
+				top: -8px;
+				right: -8px;
+				background: var(--color-error);
+				color: var(--color-primary-text);
+				border: none;
+				border-radius: 50%;
+				width: 24px;
+				height: 24px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				cursor: pointer;
+				box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+				transition: background-color 0.2s ease;
+
+				&:hover {
+					background: var(--color-error-hover);
+				}
+			}
+		}
 	}
 }
 </style>

@@ -19,6 +19,8 @@ use OCP\AppFramework\Db\Entity;
  * @method string getSubject()
  * @method void setMessage(string $message)
  * @method string getMessage()
+ * @method void setCoverPath(string $coverPath)
+ * @method string getCoverPath()
  * @method void setPlainMessage(string $plainMessage)
  * @method string getPlainMessage()
  * @method void setAllowComments(int $allowComments)
@@ -46,6 +48,9 @@ class Announcement extends Entity {
 	/** @var string */
 	protected $message;
 
+    /** @var string */
+    protected $coverPath;
+
 	/** @var string */
 	protected $plainMessage;
 
@@ -69,6 +74,7 @@ class Announcement extends Entity {
 		$this->addType('user', 'string');
 		$this->addType('subject', 'string');
 		$this->addType('message', 'string');
+		$this->addType('coverPath', 'string');
 		$this->addType('plainMessage', 'string');
 		$this->addType('allowComments', 'integer');
 		$this->addType('scheduleTime', 'integer');
@@ -122,6 +128,8 @@ class Announcement extends Entity {
 	 * @return array a list of groups
 	 */
 	public function getGroupsDecode(): array {
-		return json_decode($this->getGroups());
+        $groups = json_decode($this->getGroups());
+
+		return !empty($groups) ? $groups : [];
 	}
 }
